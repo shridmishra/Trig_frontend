@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sequential Glow Animation</title>
+<style>
+  body {
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background: #000;
+    overflow: hidden;
+  }
+
+  .sphere-container {
+    position: relative;
+    width: 340px;
+    height: 340px;
+  }
+
+  .sphere {
+    position: absolute;
+    top: 50px;
+    left: 50px;
+    width: 240px;
+    height: 240px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #222, #000);
+    z-index: 2;
+  }
+
+  svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 340px;
+    height: 340px;
+    z-index: 1;
+  }
+
+  path {
+    fill: none;
+    stroke: #00ff00;
+    stroke-width: 6;
+    stroke-linecap: round;
+    filter: drop-shadow(0 0 12px #00ff00);
+    stroke-dasharray: 377;
+    stroke-dashoffset: 377;
+    opacity: 0;
+  }
+
+  /* Arcs with infinite repetition and gap */
+  .left-arc,
+  .right-arc {
+    animation: arcLoop 6s linear infinite; /* total cycle 6s */
+    animation-delay: 2s;
+  }
+
+  @keyframes arcLoop {
+    0%   { stroke-dashoffset: 377; opacity: 1; }
+    30%  { stroke-dashoffset: 0; opacity: 1; }   /* arc fully visible */
+    40%  { stroke-dashoffset: 0; opacity: 0; }   /* fade out */
+    100% { stroke-dashoffset: 377; opacity: 0; } /* remain hidden until next loop */
+  }
+
+  /* Horizontal LED beams */
+  .left-beam,
+  .right-beam {
+    position: absolute;
+    top: 50%;
+    height: 4px;
+    width: 340px;
+    opacity: 0;
+    transform: translateY(-50%);
+    pointer-events: none;
+    border-radius: 2px;
+    filter: blur(3px);
+    z-index: 1;
+  }
+
+  .left-beam {
+    background: linear-gradient(
+      to right,
+      rgba(0,255,0,0) 0%,
+      rgba(0,255,0,0.9) 40%,
+      rgba(0,255,0,1) 50%,
+      rgba(0,255,0,0.8) 60%,
+      rgba(0,255,0,0) 100%
+    );
+    animation: leftBeam 6s ease-in-out infinite;
+  }
+
+  .right-beam {
+    background: linear-gradient(
+      to right,
+      rgba(0,255,0,0) 0%,
+      rgba(0,255,0,0.8) 40%,
+      rgba(0,255,0,1) 50%,
+      rgba(0,255,0,0.9) 60%,
+      rgba(0,255,0,0) 100%
+    );
+    animation: rightBeam 6s ease-in-out infinite;
+    animation-delay: 3.2s; /* starts after arcs disappear */
+  }
+
+  @keyframes rightBeam {
+    0% { left: calc(50% - 170px); opacity: 0; }
+    20% { opacity: 1; }
+    50% { left: 1000px; opacity: 0.8; }
+    70% { opacity: 0; }
+    100% { opacity: 0; }
+  }
+
+  @keyframes leftBeam {
+    0% { left: -1000px; opacity: 0; }
+    20% { opacity: 1; }
+    50% { left: calc(50% - 170px); opacity: 0.8; }
+    70% { opacity: 0; }
+    100% { left: -400px; opacity: 0; }
+  }
+
+</style>
+</head>
+<body>
+  <div class="sphere-container">
+    <div class="sphere"></div>
+
+    <!-- Arc container -->
+    <svg viewBox="0 0 340 340" class="arc-container">
+      <path class="left-arc" d="M50,170 A120,120 0 0,1 290,170"></path>
+      <path class="right-arc" d="M50,170 A120,120 0 0,0 290,170"></path>
+    </svg>
+
+    <!-- Horizontal LED beams -->
+    <div class="left-beam"></div>
+    <div class="right-beam"></div>
+  </div>
+</body>
+</html>

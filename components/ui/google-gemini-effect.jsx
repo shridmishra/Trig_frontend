@@ -16,7 +16,7 @@ const sora = Sora({
 export const GoogleGeminiEffect = ({  className }) => {
   const pathRefs = useRef([]);
   const [points, setPoints] = useState([]);
-  const [scrollProgress, setScrollProgress] = useState(0);
+  const [animationProgress, setAnimationProgress] = useState(0);
   const [trigPositions, setTrigPositions] = useState([]);
   const [initialTrigPositions, setInitialTrigPositions] = useState([]);
   const [logoPositions, setLogoPositions] = useState([]);
@@ -46,40 +46,69 @@ export const GoogleGeminiEffect = ({  className }) => {
   ];
 
   // Progress Calculations
-  const getPathProgress = useCallback((scrollProgress, index) => {
-  try {
-    // Spread out per-item animations evenly between 0 and 100
-    const totalItems = 5; // number of paths
-    const startScroll = (index / totalItems) * 100;
-    const endScroll = ((index + 1) / totalItems) * 100;
+  const getPathProgress = useCallback((animationProgress, index) => {
+    try {
+      const logoAnimationEndTime = index * 18 + 40;
+      const trigAnimationDuration = 20;
+      const startProgress = logoAnimationEndTime;
+      const endProgress = startProgress + trigAnimationDuration;
 
-    if (scrollProgress < startScroll) return 0;
-    if (scrollProgress >= endScroll) return 1;
+      if (animationProgress < startProgress) return 0;
+      if (animationProgress >= endProgress) return 1;
 
-    return (scrollProgress - startScroll) / (endScroll - startScroll);
-  } catch (e) {
-    console.error("Error in getPathProgress:", e);
-    return 0;
-  }
-}, []);
+      return (animationProgress - startProgress) / trigAnimationDuration;
+    } catch (e) {
+      console.error("Error in getPathProgress:", e);
+      return 0;
+    }
+  }, []);
 
-
-  const getLogoPathProgress = (scrollProgress, index) => {
+  const getLogoPathProgress = (animationProgress, index) => {
     try {
       const delayPerLogo = 18;
-      const startScroll = index * delayPerLogo;
-      const endScroll = startScroll + 40;
+      const startProgress = index * delayPerLogo;
+      const endProgress = startProgress + 40;
 
-      if (scrollProgress < startScroll) return 0;
-      if (scrollProgress >= endScroll) return 0.5;
-      return ((scrollProgress - startScroll) / (endScroll - startScroll)) * 0.5;
+      if (animationProgress < startProgress) return 0;
+      if (animationProgress >= endProgress) return 0.5;
+      return ((animationProgress - startProgress) / (endProgress - startProgress)) * 0.5;
     } catch (e) {
       console.error("Error in getLogoPathProgress:", e);
       return 0;
     }
   };
 
+  const getLinePathLengthProgress = (animationProgress, index) => {
+    const logoProgress = getLogoPathProgress(animationProgress, index); // 0 to 0.5
+    const trigProgress = getPathProgress(animationProgress, index); // 0 to 1
+
+    if (trigProgress > 0) {
+        // TRIG animation is active, line should be at TRIG's position
+        const trigPathPosition = 0.5 + trigProgress * 0.5;
+        return trigPathPosition;
+    } else {
+        // Logo animation is active, line should be at logo's position
+        return logoProgress;
+    }
+  }
+
   // Effect Hooks
+  useEffect(() => {
+    const startTime = Date.now();
+    const duration = 10000; // 10 seconds for a full loop
+
+    const animate = () => {
+      const elapsedTime = Date.now() - startTime;
+      const progress = (elapsedTime / duration) % 1; // Loop the progress
+      setAnimationProgress(progress * 140);
+      requestAnimationFrame(animate);
+    };
+
+    const animationFrameId = requestAnimationFrame(animate);
+
+    return () => cancelAnimationFrame(animationFrameId);
+  }, []);
+
   useEffect(() => {
     try {
       if (!pathRefs.current.length) return;
@@ -98,27 +127,6 @@ export const GoogleGeminiEffect = ({  className }) => {
       setPoints(newPoints);
     } catch (e) {
       console.error("Error in points effect:", e);
-    }
-  }, []);
-
-  useEffect(() => {
-    try {
-      const handleScroll = () => {
-        try {
-          const scrollTop = window.scrollY;
-          const docHeight =
-            document.documentElement.scrollHeight - window.innerHeight;
-          const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
-          setScrollProgress(progress);
-        } catch (e) {
-          console.error("Error in scroll handler:", e);
-        }
-      };
-
-      window.addEventListener("scroll", handleScroll);
-      return () => window.removeEventListener("scroll", handleScroll);
-    } catch (e) {
-      console.error("Error in scroll effect:", e);
     }
   }, []);
 
@@ -156,7 +164,7 @@ export const GoogleGeminiEffect = ({  className }) => {
             if (!path) return null;
             try {
               const totalLength = path.getTotalLength();
-              const pathProgress = getPathProgress(scrollProgress, index);
+              const pathProgress = getPathProgress(animationProgress, index);
               const pathPosition = totalLength * (0.5 + pathProgress * 0.5);
               return path.getPointAtLength(pathPosition);
             } catch (e) {
@@ -175,7 +183,7 @@ export const GoogleGeminiEffect = ({  className }) => {
     } catch (e) {
       console.error("Error in trig positions effect:", e);
     }
-  }, [getPathProgress, scrollProgress]);
+  }, [getPathProgress, animationProgress]);
 
   useEffect(() => {
     try {
@@ -190,7 +198,7 @@ export const GoogleGeminiEffect = ({  className }) => {
             if (!path) return null;
             try {
               const totalLength = path.getTotalLength();
-              const logoProgress = getLogoPathProgress(scrollProgress, index);
+              const logoProgress = getLogoPathProgress(animationProgress, index);
               const pathPosition = totalLength * logoProgress;
               return path.getPointAtLength(pathPosition);
             } catch (e) {
@@ -209,7 +217,7 @@ export const GoogleGeminiEffect = ({  className }) => {
     } catch (e) {
       console.error("Error in logo positions effect:", e);
     }
-  }, [scrollProgress]);
+  }, [animationProgress]);
 
   // Path Data
   const paths = [
@@ -238,8 +246,7 @@ export const GoogleGeminiEffect = ({  className }) => {
   // Render
   return (
     <div
-      className={cn("sticky top-0", className)}
-        suppressHydrationWarning
+      className={cn(className)}
       style={{
         background:
           "linear-gradient(180deg, rgba(70, 70, 70, 0.9) 0%, rgba(120, 120, 120, 0.9) 100%)",
@@ -343,9 +350,9 @@ export const GoogleGeminiEffect = ({  className }) => {
               fill="none"
               initial={{ pathLength: 0 }}
               animate={{
-                pathLength: getPathProgress(scrollProgress, i),
+                pathLength: getLinePathLengthProgress(animationProgress, i),
               }}
-              transition={{ duration: 0.8, ease: "linear" }}
+              transition={{ duration: 0 }}
             />
           </g>
         ))}
@@ -361,7 +368,7 @@ export const GoogleGeminiEffect = ({  className }) => {
         if (!logoPos) return null;
 
         const progress = Math.min(
-          getLogoPathProgress(scrollProgress, i) / 0.5,
+          getLogoPathProgress(animationProgress, i) / 0.5,
           1
         );
         const startOffset = logoStartOffsets[i] || { x: 0, y: 0 };
@@ -385,7 +392,8 @@ export const GoogleGeminiEffect = ({  className }) => {
               y: logoPos.y + currentOffsetY - 180,
               opacity: 1,
             }}
-            transition={{ duration: 0.2, ease: "linear" }}
+            transition={{ duration: 0 }}
+
             style={{
               transform: "translate(-50%, -50%)",
             }}
@@ -416,7 +424,7 @@ export const GoogleGeminiEffect = ({  className }) => {
         if (!trigPos) return null;
 
         const initialPoint = initialTrigPositions[i] || { x: 0, y: 0 };
-        const pathProgress = getPathProgress(scrollProgress, i);
+        const pathProgress = getPathProgress(animationProgress, i);
 
         return (
           <motion.div
@@ -435,7 +443,8 @@ export const GoogleGeminiEffect = ({  className }) => {
               y: trigPos.y - 180,
               opacity: pathProgress > 0 ? 1 : 0,
             }}
-            transition={{ duration: 0.5, ease: "linear" }}
+            transition={{ duration: 0 }}
+
             style={{
               transform: "translate(-50%, -50%)",
             }}
